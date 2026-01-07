@@ -68,13 +68,21 @@ const MAPPING = {
   "cube.fill": "view-in-ar",
   // Safety
   "exclamationmark.triangle": "warning",
+  "exclamationmark.triangle.fill": "warning",
   "eye": "visibility",
   "headphones": "headphones",
   "moon.stars": "nightlight",
   // Energy/Rewards
   "battery.100": "battery-full",
+  "battery.25": "battery-2-bar",
   "gift.fill": "card-giftcard",
   "clock.fill": "schedule",
+  // Notifications
+  "bell.slash.fill": "notifications-off",
+  "info.circle.fill": "info",
+  "checkmark.circle.fill": "check-circle",
+  "flag.fill": "flag",
+  "chart.bar.fill": "bar-chart",
 } satisfies Record<string, MaterialIconName>;
 
 /**

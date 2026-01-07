@@ -168,14 +168,14 @@
 - [x] Pet care reminders (hunger, thirst, happiness alerts)
 - [x] Battle energy refill notifications
 - [ ] Guild competition start/end announcements
-- [ ] Notification settings screen
+- [x] Notification settings screen
 
 
-## Guild Battle System (TODO)
-- [ ] Separate guild battles from individual daily battles
-- [ ] Guild battle energy/cap (separate from daily battle energy)
-- [ ] Guild-vs-guild matchmaking (3-5 guilds per bracket)
-- [ ] Avoid repetition in guild matchmaking
-- [ ] Guild leaderboard with individual contributions + guild totals
-- [ ] Battle points for guild competition (higher ranked = more points)
+## Guild Battle System
+- [x] Separate guild battles from individual daily battles
+- [x] Guild battle energy/cap (separate from daily battle energy)
+- [x] Guild-vs-guild matchmaking (3-5 guilds per bracket)
+- [x] Avoid repetition in guild matchmaking (cooldown system)
+- [x] Guild leaderboard with individual contributions + guild totals
+- [x] Battle points for guild competition (higher ranked = more points)
 - [ ] Guild competition notifications (start/end/results)

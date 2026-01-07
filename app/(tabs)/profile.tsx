@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, Text, View, Pressable, StyleSheet, Modal, FlatList } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useGame, type Pet } from "@/lib/game-context";
@@ -463,6 +464,10 @@ export default function ProfileScreen() {
           </Pressable>
           
           <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/notification-settings");
+            }}
             style={({ pressed }) => [
               styles.settingsRow,
               { opacity: pressed ? 0.7 : 1 }

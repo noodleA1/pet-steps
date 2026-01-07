@@ -33,12 +33,71 @@ export const RETIREMENT_LEVEL = 100;
 export const EGG_HATCH_STEPS = 5000;
 export const DAILY_BATTLE_LIMIT = 3;
 
-// Battle energy system
+// Battle energy system (Individual daily battles)
 export const BATTLE_ENERGY = {
   maxEnergy: 5,
   rechargeTimeMinutes: 30, // 30 minutes per energy point
   bonusEnergyFromGoal: 2, // Bonus energy when hitting daily goal
 } as const;
+
+// Guild battle system (Separate from individual battles)
+export const GUILD_BATTLE = {
+  maxGuildEnergy: 3, // Guild battles per day during competition
+  competitionDurationDays: 14, // Bi-weekly competitions
+  guildsPerBracket: 5, // Number of guilds competing in each bracket
+  pointsPerWin: 100, // Base points for winning a guild battle
+  pointsPerLoss: 25, // Consolation points for participating
+  rankBonusMultiplier: 0.2, // +20% points for beating higher ranked guild
+  stepsPointsRatio: 10000, // 10,000 steps = 1 competition point
+  matchmakingCooldown: 3, // Don't match same guild for 3 competitions
+} as const;
+
+// Guild competition bracket structure
+export interface GuildBracket {
+  id: string;
+  competitionId: string;
+  guilds: string[]; // Guild IDs in this bracket
+  startDate: number;
+  endDate: number;
+}
+
+// Guild battle result
+export interface GuildBattleResult {
+  id: string;
+  competitionId: string;
+  attackerGuildId: string;
+  defenderGuildId: string;
+  attackerMemberId: string;
+  defenderMemberId: string;
+  winnerId: string; // Member ID of winner
+  winnerGuildId: string;
+  pointsAwarded: number;
+  timestamp: number;
+}
+
+// Guild competition leaderboard entry
+export interface GuildLeaderboardEntry {
+  guildId: string;
+  guildName: string;
+  totalSteps: number;
+  stepsPoints: number;
+  battleWins: number;
+  battleLosses: number;
+  battlePoints: number;
+  totalPoints: number;
+  rank: number;
+  memberContributions: MemberContribution[];
+}
+
+// Individual member contribution to guild competition
+export interface MemberContribution {
+  memberId: string;
+  memberName: string;
+  steps: number;
+  battleWins: number;
+  battleLosses: number;
+  pointsContributed: number;
+}
 
 // Daily/Weekly goals and rewards
 export const STEP_GOALS = {

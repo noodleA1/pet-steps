@@ -109,6 +109,10 @@ export interface GameState {
   
   // Guild state
   guildId?: string;
+  guildBattleEnergy: number; // Separate from individual battle energy
+  lastGuildBattleDate: string;
+  guildBattlesUsedToday: number;
+  currentCompetitionId?: string;
   
   // UI state
   showPaywall: boolean;
@@ -136,7 +140,12 @@ type GameAction =
   | { type: "RECHARGE_ENERGY" }
   | { type: "CLAIM_DAILY_REWARD" }
   | { type: "CLAIM_WEEKLY_REWARD" }
-  | { type: "CHECK_GOALS" };
+  | { type: "CHECK_GOALS" }
+  | { type: "USE_GUILD_BATTLE_ENERGY" }
+  | { type: "RESET_GUILD_BATTLE_ENERGY" }
+  | { type: "JOIN_GUILD"; payload: { guildId: string } }
+  | { type: "LEAVE_GUILD" }
+  | { type: "SET_COMPETITION"; payload: { competitionId: string } };
 
 const STORAGE_KEY = "petsteps_game_state";
 
@@ -163,6 +172,9 @@ const initialState: GameState = {
   currentStreak: 0,
   lastStreakDate: "",
   weeklyStepsProgress: 0,
+  guildBattleEnergy: 3, // Max guild battles per day
+  lastGuildBattleDate: "",
+  guildBattlesUsedToday: 0,
   showPaywall: false,
   showEvolution: false,
   showBreeding: false,
@@ -628,6 +640,58 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
     
+    case "USE_GUILD_BATTLE_ENERGY": {
+      const today = new Date().toDateString();
+      // Reset guild battles if it's a new day
+      if (state.lastGuildBattleDate !== today) {
+        return {
+          ...state,
+          guildBattleEnergy: 2, // Use 1, so 3-1=2
+          guildBattlesUsedToday: 1,
+          lastGuildBattleDate: today,
+        };
+      }
+      if (state.guildBattleEnergy <= 0) return state;
+      return {
+        ...state,
+        guildBattleEnergy: state.guildBattleEnergy - 1,
+        guildBattlesUsedToday: state.guildBattlesUsedToday + 1,
+      };
+    }
+    
+    case "RESET_GUILD_BATTLE_ENERGY": {
+      return {
+        ...state,
+        guildBattleEnergy: 3,
+        guildBattlesUsedToday: 0,
+        lastGuildBattleDate: new Date().toDateString(),
+      };
+    }
+    
+    case "JOIN_GUILD": {
+      return {
+        ...state,
+        guildId: action.payload.guildId,
+        guildBattleEnergy: 3, // Reset energy on join
+        guildBattlesUsedToday: 0,
+      };
+    }
+    
+    case "LEAVE_GUILD": {
+      return {
+        ...state,
+        guildId: undefined,
+        currentCompetitionId: undefined,
+      };
+    }
+    
+    case "SET_COMPETITION": {
+      return {
+        ...state,
+        currentCompetitionId: action.payload.competitionId,
+      };
+    }
+    
     default:
       return state;
   }
@@ -652,6 +716,12 @@ interface GameContextType {
   claimDailyReward: () => void;
   claimWeeklyReward: () => void;
   getEnergyRechargeTime: () => number;
+  // Guild battle functions
+  canGuildBattle: () => boolean;
+  useGuildBattleEnergy: () => boolean;
+  joinGuild: (guildId: string) => void;
+  leaveGuild: () => void;
+  getGuildBattleInfo: () => { energy: number; maxEnergy: number; battlesUsed: number; canBattle: boolean };
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -790,6 +860,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return Math.ceil(minutesUntilNext);
   };
   
+  // Guild battle functions
+  const canGuildBattle = () => {
+    if (!state.guildId) return false;
+    const today = new Date().toDateString();
+    if (state.lastGuildBattleDate !== today) return true; // New day, reset
+    return state.guildBattleEnergy > 0;
+  };
+  
+  const useGuildBattleEnergy = () => {
+    if (!canGuildBattle()) return false;
+    dispatch({ type: "USE_GUILD_BATTLE_ENERGY" });
+    return true;
+  };
+  
+  const joinGuild = (guildId: string) => {
+    dispatch({ type: "JOIN_GUILD", payload: { guildId } });
+  };
+  
+  const leaveGuild = () => {
+    dispatch({ type: "LEAVE_GUILD" });
+  };
+  
+  const getGuildBattleInfo = () => {
+    const today = new Date().toDateString();
+    const isNewDay = state.lastGuildBattleDate !== today;
+    return {
+      energy: isNewDay ? 3 : state.guildBattleEnergy,
+      maxEnergy: 3,
+      battlesUsed: isNewDay ? 0 : state.guildBattlesUsedToday,
+      canBattle: state.guildId ? (isNewDay || state.guildBattleEnergy > 0) : false,
+    };
+  };
+  
   // Periodically recharge energy and check goals
   useEffect(() => {
     const interval = setInterval(() => {
@@ -819,6 +922,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       claimDailyReward,
       claimWeeklyReward,
       getEnergyRechargeTime,
+      canGuildBattle,
+      useGuildBattleEnergy,
+      joinGuild,
+      leaveGuild,
+      getGuildBattleInfo,
     }}>
       {children}
     </GameContext.Provider>

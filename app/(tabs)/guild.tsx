@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, Text, View, Pressable, StyleSheet, TextInput, Modal } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useGame } from "@/lib/game-context";
@@ -245,6 +246,21 @@ function MyGuildView({ onLeave }: { onLeave: () => void }) {
           <IconSymbol name="bell.fill" size={20} color={colors.foreground} />
           <Text className="text-foreground font-medium ml-3 flex-1">Guild Announcements</Text>
           <IconSymbol name="chevron.right" size={20} color={colors.muted} />
+        </Pressable>
+        
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/guild-battle");
+          }}
+          style={({ pressed }) => [
+            styles.actionButton,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }
+          ]}
+        >
+          <IconSymbol name="bolt.fill" size={20} color="white" />
+          <Text className="text-white font-semibold ml-3 flex-1">Guild Battles</Text>
+          <IconSymbol name="chevron.right" size={20} color="white" />
         </Pressable>
         
         <Pressable
