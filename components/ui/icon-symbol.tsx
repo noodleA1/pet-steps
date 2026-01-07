@@ -5,7 +5,7 @@ import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
+type MaterialIconName = ComponentProps<typeof MaterialIcons>["name"];
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
@@ -14,11 +14,59 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
+  // Navigation
   "house.fill": "home",
+  "figure.walk": "directions-walk",
+  "bolt.fill": "flash-on",
+  "person.3.fill": "groups",
+  "person.fill": "person",
+  // General
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-} as IconMapping;
+  "chevron.left": "chevron-left",
+  "xmark": "close",
+  "checkmark": "check",
+  "plus": "add",
+  "minus": "remove",
+  "gear": "settings",
+  "bell.fill": "notifications",
+  // Pet care
+  "heart.fill": "favorite",
+  "fork.knife": "restaurant",
+  "drop.fill": "water-drop",
+  "gamecontroller.fill": "sports-esports",
+  "sparkles": "auto-awesome",
+  // Battle
+  "shield.fill": "shield",
+  "flame.fill": "local-fire-department",
+  "bolt.heart.fill": "health-and-safety",
+  "trophy.fill": "emoji-events",
+  "swords": "sports-mma",
+  // Elements
+  "flame": "whatshot",
+  "water.waves": "waves",
+  "leaf.fill": "eco",
+  "wind": "air",
+  // Breeding/Lineage
+  "egg.fill": "egg",
+  "figure.2.arms.open": "family-restroom",
+  "tree": "account-tree",
+  // Guild
+  "crown.fill": "workspace-premium",
+  "star.fill": "star",
+  // Subscription
+  "creditcard.fill": "credit-card",
+  "lock.fill": "lock",
+  "lock.open.fill": "lock-open",
+  // Media
+  "photo.fill": "photo",
+  "camera.fill": "camera-alt",
+  "arrow.clockwise": "refresh",
+  "play.fill": "play-arrow",
+  "video.fill": "videocam",
+  "cube.fill": "view-in-ar",
+} satisfies Record<string, MaterialIconName>;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.

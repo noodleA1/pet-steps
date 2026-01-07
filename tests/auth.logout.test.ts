@@ -23,6 +23,14 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
+    totalSteps: 0,
+    dailyStepGoal: 5000,
+    weeklyStepGoal: 35000,
+    tutorialCompleted: false,
+    subscriptionTier: "free",
+    subscriptionExpiresAt: null,
+    aiTokens: 0,
+    guildId: null,
   };
   
   const ctx: TrpcContext = {
