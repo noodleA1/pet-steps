@@ -9,6 +9,7 @@ import { useGame } from "@/lib/game-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { GUILD_BATTLE, GuildLeaderboardEntry, MemberContribution } from "@/shared/game-types";
+import { CountdownTimer, useCountdown } from "@/components/countdown-timer";
 
 // Mock competing guilds in current bracket
 const MOCK_BRACKET_GUILDS = [
@@ -181,7 +182,11 @@ export default function GuildBattleScreen() {
   const [activeTab, setActiveTab] = useState<"battle" | "leaderboard" | "contributions">("battle");
   
   const guildInfo = getGuildBattleInfo();
-  const competitionDaysLeft = 5; // Mock - would come from server
+  
+  // Mock competition end time - 5 days from now (change to test urgent mode)
+  // To test urgent countdown: new Date(Date.now() + 12 * 60 * 60 * 1000) // 12 hours
+  const competitionEndTime = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+  const countdown = useCountdown(competitionEndTime);
   
   const handleBattle = (opponent: typeof MOCK_OPPONENTS[0]) => {
     if (!guildInfo.canBattle) return;
@@ -241,18 +246,26 @@ export default function GuildBattleScreen() {
           </View>
           
           {/* Competition Status */}
-          <View className="bg-primary rounded-2xl p-4 mb-4">
+          <View 
+            className="rounded-2xl p-4 mb-4"
+            style={{ backgroundColor: countdown.isUrgent ? colors.warning : colors.primary }}
+          >
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center">
                 <IconSymbol name="trophy.fill" size={20} color="white" />
-                <Text className="text-white font-bold ml-2">Competition Active</Text>
+                <Text className="text-white font-bold ml-2">
+                  {countdown.isUrgent ? "ENDING SOON!" : "Competition Active"}
+                </Text>
               </View>
               <View className="bg-white/20 px-3 py-1 rounded-full">
-                <Text className="text-white font-medium">{competitionDaysLeft} days left</Text>
+                <Text className="text-white font-medium">{countdown.formatted}</Text>
               </View>
             </View>
             <Text className="text-white/80 text-sm mb-3">
-              Battle members from competing guilds to earn points!
+              {countdown.isUrgent 
+                ? "Final hours! Every battle counts!"
+                : "Battle members from competing guilds to earn points!"
+              }
             </Text>
             
             {/* Guild Battle Energy */}

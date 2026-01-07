@@ -8,6 +8,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useGame } from "@/lib/game-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { CountdownTimer, useCountdown } from "@/components/countdown-timer";
 
 // Mock guild data
 const MOCK_GUILDS = [
@@ -113,37 +114,61 @@ function MemberRow({ member, rank }: { member: typeof MOCK_MEMBERS[0]; rank: num
   );
 }
 
-function CompetitionBanner({ daysLeft, guildRank }: { daysLeft: number; guildRank: number }) {
+function CompetitionBanner({ endTime, guildRank }: { endTime: Date; guildRank: number }) {
   const colors = useColors();
+  const countdown = useCountdown(endTime);
   
   return (
-    <View className="bg-primary rounded-2xl p-4 mb-4">
-      <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-row items-center">
-          <IconSymbol name="trophy.fill" size={24} color="white" />
-          <Text className="text-white font-bold text-lg ml-2">Guild Competition</Text>
+    <View className="mb-4">
+      {/* Main banner */}
+      <View 
+        className="rounded-2xl p-4"
+        style={{ backgroundColor: countdown.isUrgent ? colors.warning : colors.primary }}
+      >
+        <View className="flex-row items-center justify-between mb-2">
+          <View className="flex-row items-center">
+            <IconSymbol name="trophy.fill" size={24} color="white" />
+            <Text className="text-white font-bold text-lg ml-2">Guild Competition</Text>
+          </View>
+          {countdown.isUrgent ? (
+            <View className="bg-white/30 px-3 py-1 rounded-full flex-row items-center">
+              <IconSymbol name="exclamationmark.triangle.fill" size={14} color="white" />
+              <Text className="text-white font-bold ml-1">ENDING SOON</Text>
+            </View>
+          ) : (
+            <View className="bg-white/20 px-3 py-1 rounded-full">
+              <Text className="text-white font-medium">{countdown.formatted}</Text>
+            </View>
+          )}
         </View>
-        <View className="bg-white/20 px-3 py-1 rounded-full">
-          <Text className="text-white font-medium">{daysLeft} days left</Text>
+        <Text className="text-white/80 mb-3">
+          {countdown.isUrgent 
+            ? "Final hours! Make every step and battle count!"
+            : "Walk together, battle together! Top guilds earn exclusive rewards."
+          }
+        </Text>
+        <View className="flex-row justify-between">
+          <View>
+            <Text className="text-white/60 text-xs">Current Rank</Text>
+            <Text className="text-white font-bold text-2xl">#{guildRank}</Text>
+          </View>
+          <View>
+            <Text className="text-white/60 text-xs">Battle Points</Text>
+            <Text className="text-white font-bold text-2xl">1,250</Text>
+          </View>
+          <View>
+            <Text className="text-white/60 text-xs">Guild Steps</Text>
+            <Text className="text-white font-bold text-2xl">1.2M</Text>
+          </View>
         </View>
       </View>
-      <Text className="text-white/80 mb-3">
-        Walk together, battle together! Top guilds earn exclusive rewards.
-      </Text>
-      <View className="flex-row justify-between">
-        <View>
-          <Text className="text-white/60 text-xs">Current Rank</Text>
-          <Text className="text-white font-bold text-2xl">#{guildRank}</Text>
+      
+      {/* Urgent countdown timer - shows in last 24 hours */}
+      {countdown.isUrgent && (
+        <View className="mt-3">
+          <CountdownTimer endTime={endTime} showUrgent={true} />
         </View>
-        <View>
-          <Text className="text-white/60 text-xs">Battle Points</Text>
-          <Text className="text-white font-bold text-2xl">1,250</Text>
-        </View>
-        <View>
-          <Text className="text-white/60 text-xs">Guild Steps</Text>
-          <Text className="text-white font-bold text-2xl">1.2M</Text>
-        </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -192,10 +217,14 @@ function MyGuildView({ onLeave }: { onLeave: () => void }) {
   const colors = useColors();
   const myGuild = MOCK_GUILDS[0]; // Pretend user is in the top guild
   
+  // Mock competition end time - 5 days from now (change to test urgent mode)
+  // To test urgent countdown: new Date(Date.now() + 12 * 60 * 60 * 1000) // 12 hours
+  const competitionEndTime = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+  
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
       {/* Competition Banner */}
-      <CompetitionBanner daysLeft={5} guildRank={1} />
+      <CompetitionBanner endTime={competitionEndTime} guildRank={1} />
       
       {/* Guild Info */}
       <View className="bg-surface rounded-2xl p-4 mb-4">

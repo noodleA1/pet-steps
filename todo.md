@@ -179,3 +179,9 @@
 - [x] Guild leaderboard with individual contributions + guild totals
 - [x] Battle points for guild competition (higher ranked = more points)
 - [ ] Guild competition notifications (start/end/results)
+
+
+## Competition Countdown Timer
+- [x] Create countdown timer component with hours:minutes:seconds
+- [x] Show urgent countdown in last 24 hours of competition
+- [x] Integrate with guild screen and guild battle screen
