@@ -103,14 +103,21 @@ export default function GeneratePetScreen() {
   const tierInfo = SUBSCRIPTION_TIERS[state.subscriptionTier];
   const canGenerate = tierInfo.canGenerateAI && state.aiTokens > 0;
   
-  // Image generation mutation
-  const generateImageMutation = trpc.generateImage.useMutation({
-    onSuccess: (data: { url?: string }) => {
-      setGeneratedImage(data.url || null);
+  // Safe image generation mutation with moderation
+  const generateSafeMutation = trpc.generateSafePetImage.useMutation({
+    onSuccess: (data) => {
+      if (data.success && data.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        // Only deduct token if charged
+        if (data.tokensCharged) {
+          dispatch({ type: "SET_STATE", payload: { aiTokens: state.aiTokens - 1 } });
+        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setError(data.error || "Generation failed");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
       setIsGenerating(false);
-      // Deduct token
-      dispatch({ type: "SET_STATE", payload: { aiTokens: state.aiTokens - 1 } });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (err) => {
       setError(err.message || "Failed to generate image");
@@ -118,6 +125,20 @@ export default function GeneratePetScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     },
   });
+
+  // Validate uploaded image
+  const validateImageMutation = trpc.validateUploadedImage.useMutation({
+    onSuccess: (data) => {
+      if (!data.valid) {
+        setError(data.reason || "Please use a different image. Human photos and explicit content are not allowed.");
+        setReferenceImage(null);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+    },
+  });
+
+  // Prompt length limit
+  const MAX_PROMPT_LENGTH = 200;
   
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -128,8 +149,12 @@ export default function GeneratePetScreen() {
     });
     
     if (!result.canceled && result.assets[0]) {
-      setReferenceImage(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      setReferenceImage(imageUri);
+      setError(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Note: In production, upload image first then validate
+      // For now, validation happens during generation
     }
   };
   
@@ -155,30 +180,24 @@ export default function GeneratePetScreen() {
   const handleGenerate = async () => {
     if (!canGenerate) return;
     
+    // Check prompt length
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      setError(`Prompt too long. Please keep it under ${MAX_PROMPT_LENGTH} characters.`);
+      return;
+    }
+    
     setIsGenerating(true);
     setError(null);
     
-    // Build the prompt based on element and user input
-    const elementDescriptions: Record<ElementType, string> = {
-      fire: "fiery, flames, orange and red colors, ember effects",
-      water: "aquatic, water effects, blue and cyan colors, flowing",
-      earth: "rocky, nature, green and brown colors, crystalline",
-      air: "ethereal, wind effects, white and cyan colors, floating",
-    };
-    
-    const basePrompt = `A cute fantasy pet creature, ${elementDescriptions[selectedElement]}, game art style, detailed, vibrant colors`;
-    const fullPrompt = prompt ? `${basePrompt}, ${prompt}` : basePrompt;
-    
     try {
-      if (mode === "text-to-image") {
-        generateImageMutation.mutate({ prompt: fullPrompt });
-      } else if (mode === "image-to-image" && referenceImage) {
-        // For image-to-image, we'd need to upload the reference first
-        // For now, use text-to-image with the prompt
-        generateImageMutation.mutate({ 
-          prompt: `${fullPrompt}, evolved form, more powerful, enhanced features`,
-        });
-      }
+      // Use safe generation with full moderation pipeline
+      generateSafeMutation.mutate({
+        userPrompt: prompt,
+        element: selectedElement,
+        evolutionLevel: state.activePet?.level || 1,
+        secondaryElement: state.activePet?.secondaryElement,
+        referenceImageUrl: mode === "image-to-image" ? referenceImage || undefined : undefined,
+      });
     } catch (err) {
       setError("Failed to start generation");
       setIsGenerating(false);

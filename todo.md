@@ -95,3 +95,20 @@
 - [x] Subscription status
 - [ ] Health app permissions
 - [ ] Notification settings
+
+
+## Content Moderation & Safety
+- [x] Prompt length limit to prevent jailbreaking (200 chars)
+- [x] Blocked keywords filter for inappropriate content
+- [x] Vision-based image approval (check generated images)
+- [x] Image-to-image validation (reject humans/explicit uploads)
+- [x] Friendly error messages for rejected content
+- [x] No token charge for failed/rejected attempts
+- [x] AI prompt enhancement with auto-cleanup
+
+## Generation Quality
+- [x] Element-aware prompt seeding (fire traits, water traits, etc.)
+- [x] Evolution maturity guidance (level-based features)
+- [x] User suggestion enhancement via AI
+- [x] Background removal for pet images
+- [ ] Lineage-aware generation (inherit parent visual traits)
