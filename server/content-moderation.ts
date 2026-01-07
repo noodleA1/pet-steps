@@ -140,10 +140,11 @@ export function buildEnhancedPrompt(
     ? `, with hints of ${secondaryTraits[Math.floor(Math.random() * secondaryTraits.length)]}`
     : "";
   
-  // Build the full prompt
+  // Build the full prompt with GREEN SCREEN background for easy removal
   const basePrompt = `A fantasy pet creature, ${maturityDesc}, ${selectedPrimary}${selectedSecondary}`;
   const userAdditions = userPrompt ? `, ${userPrompt}` : "";
-  const styleGuide = ", game art style, clean design, transparent background, centered composition, high quality";
+  // Use solid bright green (#00FF00) background for easy chroma key removal
+  const styleGuide = ", game art style, clean design, solid bright green background #00FF00, centered composition, high quality digital art, no shadows on background";
   
   return `${basePrompt}${userAdditions}${styleGuide}`;
 }

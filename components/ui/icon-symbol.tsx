@@ -66,6 +66,15 @@ const MAPPING = {
   "play.fill": "play-arrow",
   "video.fill": "videocam",
   "cube.fill": "view-in-ar",
+  // Safety
+  "exclamationmark.triangle": "warning",
+  "eye": "visibility",
+  "headphones": "headphones",
+  "moon.stars": "nightlight",
+  // Energy/Rewards
+  "battery.100": "battery-full",
+  "gift.fill": "card-giftcard",
+  "clock.fill": "schedule",
 } satisfies Record<string, MaterialIconName>;
 
 /**

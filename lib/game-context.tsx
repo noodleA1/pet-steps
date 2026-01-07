@@ -52,6 +52,11 @@ export interface Egg {
     defense: number;
     health: number;
   };
+  // Tracked parent elements for free tier upgrade path
+  trackedParentElements?: {
+    mom: ElementType;
+    dad: ElementType;
+  };
 }
 
 export interface GameState {
@@ -79,11 +84,21 @@ export interface GameState {
     water: number;
     toy: number;
     treat: number;
+    energy_boost: number;
   };
   
   // Battle state
   dailyBattlesUsed: number;
   lastBattleDate: string;
+  battleEnergy: number;
+  lastEnergyRecharge: number;
+  
+  // Goals and streaks
+  dailyGoalMet: boolean;
+  weeklyGoalMet: boolean;
+  currentStreak: number;
+  lastStreakDate: string;
+  weeklyStepsProgress: number;
   
   // Guild state
   guildId?: string;
@@ -106,10 +121,15 @@ type GameAction =
   | { type: "EVOLVE_PET"; payload: { imageUrl?: string } }
   | { type: "COMPLETE_TUTORIAL" }
   | { type: "USE_BATTLE" }
-  | { type: "ADD_CONSUMABLE"; payload: { type: "food" | "water" | "toy" | "treat"; amount: number } }
+  | { type: "ADD_CONSUMABLE"; payload: { type: "food" | "water" | "toy" | "treat" | "energy_boost"; amount: number } }
   | { type: "HATCH_EGG"; payload: { name: string; imageUrl?: string } }
   | { type: "BREED_PET"; payload: { partnerId: string; partnerElement: ElementType; partnerStats: { attack: number; defense: number; health: number } } }
-  | { type: "UPDATE_CARE_LEVELS" };
+  | { type: "UPDATE_CARE_LEVELS" }
+  | { type: "USE_ENERGY" }
+  | { type: "RECHARGE_ENERGY" }
+  | { type: "CLAIM_DAILY_REWARD" }
+  | { type: "CLAIM_WEEKLY_REWARD" }
+  | { type: "CHECK_GOALS" };
 
 const STORAGE_KEY = "petsteps_game_state";
 
@@ -126,9 +146,16 @@ const initialState: GameState = {
   retiredPets: [],
   egg: null,
   stepsToHatch: 0,
-  consumables: { food: 3, water: 3, toy: 1, treat: 0 },
+  consumables: { food: 3, water: 3, toy: 1, treat: 0, energy_boost: 0 },
   dailyBattlesUsed: 0,
   lastBattleDate: "",
+  battleEnergy: 5,
+  lastEnergyRecharge: Date.now(),
+  dailyGoalMet: false,
+  weeklyGoalMet: false,
+  currentStreak: 0,
+  lastStreakDate: "",
+  weeklyStepsProgress: 0,
   showPaywall: false,
   showEvolution: false,
   showBreeding: false,
@@ -373,10 +400,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     
     case "EVOLVE_PET": {
       if (!state.activePet) return state;
-      // Boost stats on evolution
+      const isFreeUser = state.subscriptionTier === "free";
+      
+      // Boost stats on evolution (ALL users get stat boost)
       const attackBoost = Math.floor(state.activePet.attack * 0.15);
       const defenseBoost = Math.floor(state.activePet.defense * 0.15);
       const healthBoost = Math.floor(state.activePet.maxHealth * 0.1);
+      
+      // FREE TIER: Only stat boost, NO visual evolution
+      // Pet stays as base form even at level 99 (funny strong baby)
+      // PAID TIER: Stat boost + visual evolution (new image)
+      const newEvolutionStage = isFreeUser 
+        ? state.activePet.evolutionStage // Stay at same visual stage
+        : state.activePet.evolutionStage + 1; // Visual evolution
       
       return {
         ...state,
@@ -386,7 +422,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           defense: state.activePet.defense + defenseBoost,
           maxHealth: state.activePet.maxHealth + healthBoost,
           health: state.activePet.maxHealth + healthBoost,
-          imageUrl: action.payload.imageUrl || state.activePet.imageUrl,
+          evolutionStage: newEvolutionStage,
+          // Free tier: keep original image, Paid tier: update to evolved image
+          imageUrl: isFreeUser ? state.activePet.imageUrl : (action.payload.imageUrl || state.activePet.imageUrl),
         },
         showEvolution: false,
       };
@@ -455,18 +493,22 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       const mom = state.activePet;
       const { partnerId, partnerElement, partnerStats } = action.payload;
+      const isFreeUser = state.subscriptionTier === "free";
       
       // Calculate inherited stats (20% from each parent)
       const inheritedAttack = Math.floor((mom.attack * 0.2) + (partnerStats.attack * 0.2));
       const inheritedDefense = Math.floor((mom.defense * 0.2) + (partnerStats.defense * 0.2));
       const inheritedHealth = Math.floor((mom.maxHealth * 0.2) + (partnerStats.health * 0.2));
       
-      // Determine secondary element
+      // Determine secondary element - FREE TIER: track parent elements but no battle benefits
+      // Parents are always tracked for potential future paid upgrade
       const secondaryElement = partnerElement !== mom.primaryElement ? partnerElement : undefined;
       
       const newEgg: Egg = {
         primaryElement: mom.primaryElement,
-        secondaryElement,
+        // Free tier: still track secondary element for lineage, but no battle bonuses
+        // When user upgrades, they can regenerate pet with full elemental benefits
+        secondaryElement: isFreeUser ? undefined : secondaryElement,
         generation: mom.generation + 1,
         parentMomId: mom.id,
         parentDadId: partnerId,
@@ -474,6 +516,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           attack: inheritedAttack,
           defense: inheritedDefense,
           health: inheritedHealth,
+        },
+        // Store parent elements for potential upgrade (free tier can upgrade later)
+        trackedParentElements: {
+          mom: mom.primaryElement,
+          dad: partnerElement,
         },
       };
       
@@ -484,6 +531,93 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         retiredPets: [...state.retiredPets, { ...mom, isRetired: true, retiredAt: Date.now(), isActive: false }],
         egg: newEgg,
         stepsToHatch: 5000, // EGG_HATCH_STEPS
+      };
+    }
+    
+    case "USE_ENERGY": {
+      if (state.battleEnergy <= 0) return state;
+      return {
+        ...state,
+        battleEnergy: state.battleEnergy - 1,
+      };
+    }
+    
+    case "RECHARGE_ENERGY": {
+      const now = Date.now();
+      const minutesSinceLastRecharge = (now - state.lastEnergyRecharge) / (1000 * 60);
+      const energyToAdd = Math.floor(minutesSinceLastRecharge / 30); // 30 min per energy
+      
+      if (energyToAdd <= 0) return state;
+      
+      const newEnergy = Math.min(5, state.battleEnergy + energyToAdd);
+      return {
+        ...state,
+        battleEnergy: newEnergy,
+        lastEnergyRecharge: now,
+      };
+    }
+    
+    case "CHECK_GOALS": {
+      const dailyMet = state.todaySteps >= state.dailyStepGoal;
+      const weeklyMet = state.weeklyStepsProgress >= state.weeklyStepGoal;
+      
+      // Update streak
+      const today = new Date().toDateString();
+      let newStreak = state.currentStreak;
+      if (dailyMet && state.lastStreakDate !== today) {
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (state.lastStreakDate === yesterday) {
+          newStreak = Math.min(7, state.currentStreak + 1);
+        } else if (state.lastStreakDate !== today) {
+          newStreak = 1;
+        }
+      }
+      
+      return {
+        ...state,
+        dailyGoalMet: dailyMet,
+        weeklyGoalMet: weeklyMet,
+        currentStreak: newStreak,
+        lastStreakDate: dailyMet ? today : state.lastStreakDate,
+      };
+    }
+    
+    case "CLAIM_DAILY_REWARD": {
+      if (!state.dailyGoalMet) return state;
+      
+      const streakMultiplier = 1 + (state.currentStreak * 0.1);
+      const baseReward = 1;
+      const reward = Math.floor(baseReward * streakMultiplier);
+      
+      return {
+        ...state,
+        consumables: {
+          ...state.consumables,
+          food: state.consumables.food + reward,
+          water: state.consumables.water + reward,
+          toy: state.consumables.toy + Math.floor(reward / 2),
+        },
+        battleEnergy: Math.min(5, state.battleEnergy + 1),
+        dailyGoalMet: false, // Reset after claiming
+      };
+    }
+    
+    case "CLAIM_WEEKLY_REWARD": {
+      if (!state.weeklyGoalMet) return state;
+      
+      return {
+        ...state,
+        consumables: {
+          ...state.consumables,
+          food: state.consumables.food + 5,
+          water: state.consumables.water + 5,
+          toy: state.consumables.toy + 3,
+          treat: state.consumables.treat + 2,
+          energy_boost: state.consumables.energy_boost + 1,
+        },
+        battleEnergy: 5, // Full refill
+        weeklyGoalMet: false, // Reset after claiming
+        weeklyStepsProgress: 0, // Reset weekly progress
       };
     }
     
@@ -505,6 +639,12 @@ interface GameContextType {
   canBattle: () => boolean;
   useBattle: () => void;
   breedPet: (partnerId: string, partnerElement: ElementType, partnerStats: { attack: number; defense: number; health: number }) => void;
+  useEnergy: () => boolean;
+  rechargeEnergy: () => void;
+  checkGoals: () => void;
+  claimDailyReward: () => void;
+  claimWeeklyReward: () => void;
+  getEnergyRechargeTime: () => number;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -585,6 +725,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "BREED_PET", payload: { partnerId, partnerElement, partnerStats } });
   };
   
+  const useEnergy = () => {
+    if (state.battleEnergy <= 0) return false;
+    dispatch({ type: "USE_ENERGY" });
+    return true;
+  };
+  
+  const rechargeEnergy = () => dispatch({ type: "RECHARGE_ENERGY" });
+  const checkGoals = () => dispatch({ type: "CHECK_GOALS" });
+  const claimDailyReward = () => dispatch({ type: "CLAIM_DAILY_REWARD" });
+  const claimWeeklyReward = () => dispatch({ type: "CLAIM_WEEKLY_REWARD" });
+  
+  const getEnergyRechargeTime = () => {
+    if (state.battleEnergy >= 5) return 0;
+    const now = Date.now();
+    const minutesSinceLastRecharge = (now - state.lastEnergyRecharge) / (1000 * 60);
+    const minutesUntilNext = 30 - (minutesSinceLastRecharge % 30);
+    return Math.ceil(minutesUntilNext);
+  };
+  
+  // Periodically recharge energy and check goals
+  useEffect(() => {
+    const interval = setInterval(() => {
+      dispatch({ type: "RECHARGE_ENERGY" });
+      dispatch({ type: "CHECK_GOALS" });
+    }, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, []);
+  
   return (
     <GameContext.Provider value={{
       state,
@@ -599,6 +767,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       canBattle,
       useBattle,
       breedPet,
+      useEnergy,
+      rechargeEnergy,
+      checkGoals,
+      claimDailyReward,
+      claimWeeklyReward,
+      getEnergyRechargeTime,
     }}>
       {children}
     </GameContext.Provider>

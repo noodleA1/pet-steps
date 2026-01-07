@@ -112,3 +112,51 @@
 - [x] User suggestion enhancement via AI
 - [x] Background removal for pet images
 - [ ] Lineage-aware generation (inherit parent visual traits)
+
+
+## Visual Enhancements
+- [x] Generate background images for main screens
+- [x] Generate 4 template pet images (fire, water, earth, air)
+- [ ] Apply backgrounds to improve visual appeal
+
+## Safety Features
+- [x] Add "Be aware of your surroundings" warning on step tracking
+- [x] Show warning on app launch/resume (daily)
+
+## Engagement Mechanics
+- [x] Daily goal consumable rewards
+- [x] Weekly goal consumable rewards
+- [x] Battle energy system with recharge timer
+- [x] Bonus battle energy rewards
+- [x] Step milestone rewards (streak system)
+
+## Free Tier Breeding
+- [x] Free tier breeding without elemental benefits
+- [x] Track parents for potential future paid upgrade
+- [x] Allow paid upgrade to regenerate pet with elements
+
+## Authentication
+- [ ] Auth0 integration setup
+- [ ] Apple OAuth login
+- [ ] Google OAuth login
+- [ ] Session persistence across app restarts
+
+
+## Free Tier Evolution Restriction
+- [x] Free tier gets stat boost only at evolution levels (no visual change)
+- [x] Pet stays as base form even at level 99
+- [x] Paid users get visual evolution + stat boost
+
+## Green Screen Generation
+- [x] Update AI prompts to use green screen (#00FF00) background
+- [x] Update background removal to leverage green screen
+
+## Template Pet Videos (ROADMAP - see docs/VIDEO_GENERATION_ROADMAP.md)
+- [ ] Set up Replicate API integration
+- [ ] Generate victory animations for 4 template pets
+- [ ] Generate defeat animations for 4 template pets
+- [ ] Generate killing blow animations for 4 template pets
+- [ ] Implement video playback in battle screen
+
+## GitHub Integration
+- [ ] Push project to new GitHub repository

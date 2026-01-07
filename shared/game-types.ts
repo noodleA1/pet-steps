@@ -33,6 +33,76 @@ export const RETIREMENT_LEVEL = 100;
 export const EGG_HATCH_STEPS = 5000;
 export const DAILY_BATTLE_LIMIT = 3;
 
+// Battle energy system
+export const BATTLE_ENERGY = {
+  maxEnergy: 5,
+  rechargeTimeMinutes: 30, // 30 minutes per energy point
+  bonusEnergyFromGoal: 2, // Bonus energy when hitting daily goal
+} as const;
+
+// Daily/Weekly goals and rewards
+export const STEP_GOALS = {
+  dailyGoalBase: 5000, // Base daily goal (adjusted per user)
+  weeklyGoalMultiplier: 5, // Weekly = daily * 5
+  minDailyGoal: 3000,
+  maxDailyGoal: 20000,
+} as const;
+
+// Consumable types
+export type ConsumableType = "food" | "water" | "toy" | "treat" | "energy_boost";
+
+export const CONSUMABLES = {
+  food: {
+    name: "Pet Food",
+    effect: "hunger",
+    amount: 30,
+    icon: "fork.knife",
+  },
+  water: {
+    name: "Fresh Water",
+    effect: "thirst",
+    amount: 30,
+    icon: "drop.fill",
+  },
+  toy: {
+    name: "Play Toy",
+    effect: "happiness",
+    amount: 20,
+    icon: "gamecontroller.fill",
+  },
+  treat: {
+    name: "Special Treat",
+    effect: "all", // Restores all stats
+    amount: 15,
+    icon: "gift.fill",
+  },
+  energy_boost: {
+    name: "Energy Boost",
+    effect: "battle_energy",
+    amount: 1,
+    icon: "battery.100",
+  },
+} as const;
+
+// Reward tiers for goals
+export const GOAL_REWARDS = {
+  daily: {
+    consumables: ["food", "water", "toy"] as ConsumableType[],
+    bonusEnergy: 1,
+    xpBonus: 500,
+  },
+  weekly: {
+    consumables: ["food", "water", "toy", "treat", "energy_boost"] as ConsumableType[],
+    bonusEnergy: 3,
+    xpBonus: 3000,
+  },
+  streak: {
+    // Bonus for consecutive days
+    multiplier: 0.1, // +10% rewards per day streak, max 7 days
+    maxDays: 7,
+  },
+} as const;
+
 // Subscription tiers
 export type SubscriptionTier = "free" | "tier1" | "tier2" | "tier3";
 
@@ -122,27 +192,27 @@ export interface BattleResult {
   totalDamageDealt: Record<number, number>;
 }
 
+// Template pet images (generated for free tier)
+export const TEMPLATE_PET_IMAGES: Record<ElementType, string> = {
+  fire: "https://files.manuscdn.com/user_upload_by_module/session_file/87407285/GcDnHLsYdzgyZFcR.png",
+  water: "https://files.manuscdn.com/user_upload_by_module/session_file/87407285/HQiRFbuUNUoAVrXc.png",
+  earth: "https://files.manuscdn.com/user_upload_by_module/session_file/87407285/ZpDkOliOzCsTJZCR.png",
+  air: "https://files.manuscdn.com/user_upload_by_module/session_file/87407285/ZnOKNZXYLQMTCWnE.png",
+};
+
 // Template pets for free tier
-export const TEMPLATE_PETS: Record<ElementType, Array<{ name: string; templateType: string }>> = {
+export const TEMPLATE_PETS: Record<ElementType, Array<{ name: string; templateType: string; imageUrl: string }>> = {
   fire: [
-    { name: "Ember Drake", templateType: "fire_drake" },
-    { name: "Flame Fox", templateType: "fire_fox" },
-    { name: "Blaze Phoenix", templateType: "fire_phoenix" },
+    { name: "Ember Drake", templateType: "fire_drake", imageUrl: TEMPLATE_PET_IMAGES.fire },
   ],
   water: [
-    { name: "Aqua Serpent", templateType: "water_serpent" },
-    { name: "Tide Turtle", templateType: "water_turtle" },
-    { name: "Storm Dolphin", templateType: "water_dolphin" },
+    { name: "Aqua Serpent", templateType: "water_serpent", imageUrl: TEMPLATE_PET_IMAGES.water },
   ],
   earth: [
-    { name: "Stone Golem", templateType: "earth_golem" },
-    { name: "Forest Bear", templateType: "earth_bear" },
-    { name: "Crystal Rhino", templateType: "earth_rhino" },
+    { name: "Stone Golem", templateType: "earth_golem", imageUrl: TEMPLATE_PET_IMAGES.earth },
   ],
   air: [
-    { name: "Wind Eagle", templateType: "air_eagle" },
-    { name: "Cloud Fairy", templateType: "air_fairy" },
-    { name: "Storm Hawk", templateType: "air_hawk" },
+    { name: "Wind Spirit", templateType: "air_spirit", imageUrl: TEMPLATE_PET_IMAGES.air },
   ],
 };
 
