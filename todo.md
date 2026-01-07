@@ -159,4 +159,4 @@
 - [ ] Implement video playback in battle screen
 
 ## GitHub Integration
-- [ ] Push project to new GitHub repository
+- [x] Push project to new GitHub repository (https://github.com/noodleA1/pet-steps)
