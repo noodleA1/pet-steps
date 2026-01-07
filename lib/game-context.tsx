@@ -7,6 +7,7 @@ import {
   scheduleDailyGoalAlert,
   cancelPetCareNotifications,
   cancelBattleEnergyNotifications,
+  triggerGuildCompetitionAlert,
 } from "@/lib/notification-manager";
 
 // Types
@@ -686,6 +687,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
     
     case "SET_COMPETITION": {
+      // Trigger competition start notification
+      if (action.payload.competitionId && !state.currentCompetitionId) {
+        triggerGuildCompetitionAlert("start", undefined, undefined);
+      }
       return {
         ...state,
         currentCompetitionId: action.payload.competitionId,
@@ -722,6 +727,10 @@ interface GameContextType {
   joinGuild: (guildId: string) => void;
   leaveGuild: () => void;
   getGuildBattleInfo: () => { energy: number; maxEnergy: number; battlesUsed: number; canBattle: boolean };
+  // Competition notifications
+  startCompetition: (competitionId: string, guildName?: string) => void;
+  endCompetition: (results?: string) => void;
+  notifyCompetitionEndingSoon: () => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -893,6 +902,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
   };
   
+  // Competition notification functions
+  const startCompetition = (competitionId: string, guildName?: string) => {
+    dispatch({ type: "SET_COMPETITION", payload: { competitionId } });
+    triggerGuildCompetitionAlert("start", guildName);
+  };
+  
+  const endCompetition = (results?: string) => {
+    triggerGuildCompetitionAlert("end");
+    if (results) {
+      // Delay results notification slightly so end notification shows first
+      setTimeout(() => {
+        triggerGuildCompetitionAlert("results", undefined, results);
+      }, 2000);
+    }
+    dispatch({ type: "SET_COMPETITION", payload: { competitionId: "" } });
+  };
+  
+  const notifyCompetitionEndingSoon = () => {
+    triggerGuildCompetitionAlert("ending_soon");
+  };
+  
   // Periodically recharge energy and check goals
   useEffect(() => {
     const interval = setInterval(() => {
@@ -927,6 +957,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       joinGuild,
       leaveGuild,
       getGuildBattleInfo,
+      startCompetition,
+      endCompetition,
+      notifyCompetitionEndingSoon,
     }}>
       {children}
     </GameContext.Provider>

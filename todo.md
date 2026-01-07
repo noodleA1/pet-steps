@@ -167,7 +167,7 @@
 - [x] Request notification permissions
 - [x] Pet care reminders (hunger, thirst, happiness alerts)
 - [x] Battle energy refill notifications
-- [ ] Guild competition start/end announcements
+- [x] Guild competition start/end announcements
 - [x] Notification settings screen
 
 
