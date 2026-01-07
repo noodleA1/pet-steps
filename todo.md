@@ -160,3 +160,22 @@
 
 ## GitHub Integration
 - [x] Push project to new GitHub repository (https://github.com/noodleA1/pet-steps)
+
+
+## Push Notifications
+- [x] Set up expo-notifications infrastructure
+- [x] Request notification permissions
+- [x] Pet care reminders (hunger, thirst, happiness alerts)
+- [x] Battle energy refill notifications
+- [ ] Guild competition start/end announcements
+- [ ] Notification settings screen
+
+
+## Guild Battle System (TODO)
+- [ ] Separate guild battles from individual daily battles
+- [ ] Guild battle energy/cap (separate from daily battle energy)
+- [ ] Guild-vs-guild matchmaking (3-5 guilds per bracket)
+- [ ] Avoid repetition in guild matchmaking
+- [ ] Guild leaderboard with individual contributions + guild totals
+- [ ] Battle points for guild competition (higher ranked = more points)
+- [ ] Guild competition notifications (start/end/results)

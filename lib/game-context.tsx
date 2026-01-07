@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ElementType, TEMPLATE_PETS, getXpForLevel, EVOLUTION_LEVELS, RETIREMENT_LEVEL, BREEDING_LEVEL } from "@/shared/game-types";
+import {
+  checkPetCareNotifications,
+  scheduleBattleEnergyAlerts,
+  scheduleDailyGoalAlert,
+  cancelPetCareNotifications,
+  cancelBattleEnergyNotifications,
+} from "@/lib/notification-manager";
 
 // Types
 export interface Pet {
@@ -680,13 +687,43 @@ export function GameProvider({ children }: { children: ReactNode }) {
     saveState();
   }, [state]);
   
-  // Update care levels periodically
+  // Update care levels periodically and check for notifications
   useEffect(() => {
     const interval = setInterval(() => {
       dispatch({ type: "UPDATE_CARE_LEVELS" });
     }, 60000); // Every minute
     return () => clearInterval(interval);
   }, []);
+  
+  // Check pet care notifications when care levels change
+  useEffect(() => {
+    if (state.activePet && !state.activePet.isEgg && !state.activePet.isRetired) {
+      checkPetCareNotifications({
+        hunger: state.activePet.hunger,
+        thirst: state.activePet.thirst,
+        happiness: state.activePet.happiness,
+        name: state.activePet.name,
+      });
+    }
+  }, [state.activePet?.hunger, state.activePet?.thirst, state.activePet?.happiness]);
+  
+  // Schedule battle energy notifications
+  useEffect(() => {
+    scheduleBattleEnergyAlerts({
+      currentEnergy: state.battleEnergy,
+      maxEnergy: 5,
+      lastRechargeTime: state.lastEnergyRecharge,
+      rechargeMinutes: 30,
+    });
+  }, [state.battleEnergy]);
+  
+  // Schedule daily goal reminders
+  useEffect(() => {
+    scheduleDailyGoalAlert({
+      currentSteps: state.todaySteps,
+      goalSteps: state.dailyStepGoal,
+    });
+  }, [state.todaySteps, state.dailyStepGoal]);
   
   const startTutorial = () => {
     const tutorialPet = createTutorialPet();
@@ -701,9 +738,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  const feedPet = () => dispatch({ type: "FEED_PET" });
-  const waterPet = () => dispatch({ type: "WATER_PET" });
-  const playWithPet = () => dispatch({ type: "PLAY_WITH_PET" });
+  const feedPet = () => {
+    dispatch({ type: "FEED_PET" });
+    cancelPetCareNotifications(); // Cancel pending care notifications
+  };
+  const waterPet = () => {
+    dispatch({ type: "WATER_PET" });
+    cancelPetCareNotifications();
+  };
+  const playWithPet = () => {
+    dispatch({ type: "PLAY_WITH_PET" });
+    cancelPetCareNotifications();
+  };
   
   const createPet = (element: ElementType, name: string, isTemplate: boolean, templateType?: string, imageUrl?: string) => {
     dispatch({ type: "CREATE_PET", payload: { element, name, isTemplate, templateType, imageUrl } });
