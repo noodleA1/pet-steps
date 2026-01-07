@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ElementType, TEMPLATE_PETS, getXpForLevel, EVOLUTION_LEVELS, RETIREMENT_LEVEL, BREEDING_LEVEL } from "@/shared/game-types";
+import { ElementType, TEMPLATE_PETS, getXpForLevel, EVOLUTION_LEVELS, RETIREMENT_LEVEL, BREEDING_LEVEL, Equipment, EquipmentSlot, generateEquipment, EQUIPMENT_SLOTS, EQUIPMENT_RARITY } from "@/shared/game-types";
 import {
   checkPetCareNotifications,
   scheduleBattleEnergyAlerts,
@@ -47,6 +47,10 @@ export interface Pet {
   isRetired: boolean;
   retiredAt?: number;
   createdAt: number;
+  // Equipment slots
+  equippedCollar?: Equipment;
+  equippedArmor?: Equipment;
+  equippedWristlets?: Equipment;
 }
 
 export interface Egg {
@@ -115,6 +119,9 @@ export interface GameState {
   guildBattlesUsedToday: number;
   currentCompetitionId?: string;
   
+  // Equipment inventory
+  equipmentInventory: Equipment[];
+  
   // UI state
   showPaywall: boolean;
   showEvolution: boolean;
@@ -146,7 +153,11 @@ type GameAction =
   | { type: "RESET_GUILD_BATTLE_ENERGY" }
   | { type: "JOIN_GUILD"; payload: { guildId: string } }
   | { type: "LEAVE_GUILD" }
-  | { type: "SET_COMPETITION"; payload: { competitionId: string } };
+  | { type: "SET_COMPETITION"; payload: { competitionId: string } }
+  | { type: "ADD_EQUIPMENT"; payload: Equipment }
+  | { type: "EQUIP_ITEM"; payload: { equipmentId: string; slot: EquipmentSlot } }
+  | { type: "UNEQUIP_ITEM"; payload: { slot: EquipmentSlot } }
+  | { type: "DISCARD_EQUIPMENT"; payload: { equipmentId: string } };
 
 const STORAGE_KEY = "petsteps_game_state";
 
@@ -176,6 +187,7 @@ const initialState: GameState = {
   guildBattleEnergy: 3, // Max guild battles per day
   lastGuildBattleDate: "",
   guildBattlesUsedToday: 0,
+  equipmentInventory: [],
   showPaywall: false,
   showEvolution: false,
   showBreeding: false,
@@ -697,6 +709,100 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
     
+    case "ADD_EQUIPMENT": {
+      return {
+        ...state,
+        equipmentInventory: [...state.equipmentInventory, action.payload],
+      };
+    }
+    
+    case "EQUIP_ITEM": {
+      if (!state.activePet) return state;
+      
+      const equipment = state.equipmentInventory.find(e => e.id === action.payload.equipmentId);
+      if (!equipment || equipment.slot !== action.payload.slot) return state;
+      
+      // Get currently equipped item (if any) to put back in inventory
+      const slotKey = `equipped${action.payload.slot.charAt(0).toUpperCase() + action.payload.slot.slice(1)}` as keyof Pet;
+      const currentlyEquipped = state.activePet[slotKey] as Equipment | undefined;
+      
+      // Update inventory: remove new item, add old item back if exists
+      let newInventory = state.equipmentInventory.filter(e => e.id !== equipment.id);
+      if (currentlyEquipped) {
+        newInventory = [...newInventory, currentlyEquipped];
+      }
+      
+      // Calculate stat changes
+      const oldBonus = currentlyEquipped?.statBonus || 0;
+      const newBonus = equipment.statBonus;
+      const elementMatch = equipment.element === state.activePet.primaryElement || equipment.element === state.activePet.secondaryElement;
+      const elementBonus = elementMatch && equipment.elementBonus ? equipment.elementBonus : 0;
+      const totalNewBonus = newBonus + elementBonus;
+      const statDiff = totalNewBonus - oldBonus;
+      
+      // Apply stat change based on slot
+      const statKey = EQUIPMENT_SLOTS[action.payload.slot].stat;
+      const updatedPet = { ...state.activePet };
+      
+      if (action.payload.slot === "collar") {
+        updatedPet.equippedCollar = equipment;
+        updatedPet.maxHealth = updatedPet.maxHealth + statDiff;
+        updatedPet.health = Math.min(updatedPet.health, updatedPet.maxHealth);
+      } else if (action.payload.slot === "armor") {
+        updatedPet.equippedArmor = equipment;
+        updatedPet.defense = updatedPet.defense + statDiff;
+      } else if (action.payload.slot === "wristlets") {
+        updatedPet.equippedWristlets = equipment;
+        updatedPet.attack = updatedPet.attack + statDiff;
+      }
+      
+      return {
+        ...state,
+        activePet: updatedPet,
+        equipmentInventory: newInventory,
+      };
+    }
+    
+    case "UNEQUIP_ITEM": {
+      if (!state.activePet) return state;
+      
+      const slotKey = `equipped${action.payload.slot.charAt(0).toUpperCase() + action.payload.slot.slice(1)}` as keyof Pet;
+      const equipped = state.activePet[slotKey] as Equipment | undefined;
+      if (!equipped) return state;
+      
+      // Calculate stat removal
+      const elementMatch = equipped.element === state.activePet.primaryElement || equipped.element === state.activePet.secondaryElement;
+      const elementBonus = elementMatch && equipped.elementBonus ? equipped.elementBonus : 0;
+      const totalBonus = equipped.statBonus + elementBonus;
+      
+      const updatedPet = { ...state.activePet };
+      
+      if (action.payload.slot === "collar") {
+        updatedPet.equippedCollar = undefined;
+        updatedPet.maxHealth = Math.max(100, updatedPet.maxHealth - totalBonus);
+        updatedPet.health = Math.min(updatedPet.health, updatedPet.maxHealth);
+      } else if (action.payload.slot === "armor") {
+        updatedPet.equippedArmor = undefined;
+        updatedPet.defense = Math.max(10, updatedPet.defense - totalBonus);
+      } else if (action.payload.slot === "wristlets") {
+        updatedPet.equippedWristlets = undefined;
+        updatedPet.attack = Math.max(10, updatedPet.attack - totalBonus);
+      }
+      
+      return {
+        ...state,
+        activePet: updatedPet,
+        equipmentInventory: [...state.equipmentInventory, equipped],
+      };
+    }
+    
+    case "DISCARD_EQUIPMENT": {
+      return {
+        ...state,
+        equipmentInventory: state.equipmentInventory.filter(e => e.id !== action.payload.equipmentId),
+      };
+    }
+    
     default:
       return state;
   }
@@ -731,6 +837,12 @@ interface GameContextType {
   startCompetition: (competitionId: string, guildName?: string) => void;
   endCompetition: (results?: string) => void;
   notifyCompetitionEndingSoon: () => void;
+  // Equipment functions
+  addEquipment: (equipment: Equipment) => void;
+  equipItem: (equipmentId: string, slot: EquipmentSlot) => void;
+  unequipItem: (slot: EquipmentSlot) => void;
+  discardEquipment: (equipmentId: string) => void;
+  getEquippedStats: () => { healthBonus: number; attackBonus: number; defenseBonus: number };
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -923,6 +1035,47 @@ export function GameProvider({ children }: { children: ReactNode }) {
     triggerGuildCompetitionAlert("ending_soon");
   };
   
+  // Equipment functions
+  const addEquipment = (equipment: Equipment) => {
+    dispatch({ type: "ADD_EQUIPMENT", payload: equipment });
+  };
+  
+  const equipItem = (equipmentId: string, slot: EquipmentSlot) => {
+    dispatch({ type: "EQUIP_ITEM", payload: { equipmentId, slot } });
+  };
+  
+  const unequipItem = (slot: EquipmentSlot) => {
+    dispatch({ type: "UNEQUIP_ITEM", payload: { slot } });
+  };
+  
+  const discardEquipment = (equipmentId: string) => {
+    dispatch({ type: "DISCARD_EQUIPMENT", payload: { equipmentId } });
+  };
+  
+  const getEquippedStats = () => {
+    if (!state.activePet) return { healthBonus: 0, attackBonus: 0, defenseBonus: 0 };
+    
+    let healthBonus = 0;
+    let attackBonus = 0;
+    let defenseBonus = 0;
+    
+    const pet = state.activePet;
+    const elementMatch = (eq: Equipment | undefined) => 
+      eq?.element === pet.primaryElement || eq?.element === pet.secondaryElement;
+    
+    if (pet.equippedCollar) {
+      healthBonus = pet.equippedCollar.statBonus + (elementMatch(pet.equippedCollar) ? (pet.equippedCollar.elementBonus || 0) : 0);
+    }
+    if (pet.equippedArmor) {
+      defenseBonus = pet.equippedArmor.statBonus + (elementMatch(pet.equippedArmor) ? (pet.equippedArmor.elementBonus || 0) : 0);
+    }
+    if (pet.equippedWristlets) {
+      attackBonus = pet.equippedWristlets.statBonus + (elementMatch(pet.equippedWristlets) ? (pet.equippedWristlets.elementBonus || 0) : 0);
+    }
+    
+    return { healthBonus, attackBonus, defenseBonus };
+  };
+  
   // Periodically recharge energy and check goals
   useEffect(() => {
     const interval = setInterval(() => {
@@ -960,6 +1113,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startCompetition,
       endCompetition,
       notifyCompetitionEndingSoon,
+      addEquipment,
+      equipItem,
+      unequipItem,
+      discardEquipment,
+      getEquippedStats,
     }}>
       {children}
     </GameContext.Provider>

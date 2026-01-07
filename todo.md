@@ -185,3 +185,13 @@
 - [x] Create countdown timer component with hours:minutes:seconds
 - [x] Show urgent countdown in last 24 hours of competition
 - [x] Integrate with guild screen and guild battle screen
+
+
+## Equipment System
+- [x] Create equipment types (collar, armor, wristlets)
+- [x] Implement rarity tiers (Common, Uncommon, Rare, Epic, Legendary)
+- [x] Procedural stat generation based on rarity
+- [x] Equipment inventory management
+- [x] Equip/unequip functionality with stat application
+- [x] Competition rewards screen with equipment drops
+- [x] AI image-to-image for equipment visualization on pets

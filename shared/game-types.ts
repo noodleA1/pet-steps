@@ -308,3 +308,246 @@ export const TUTORIAL_PET = {
   stepsToRetirement: 10,
   element: "fire" as ElementType,
 };
+
+// ==================== EQUIPMENT SYSTEM ====================
+
+// Equipment slot types
+export type EquipmentSlot = "collar" | "armor" | "wristlets";
+
+// Equipment rarity tiers
+export type EquipmentRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+// Rarity configuration with stat ranges and drop rates
+export const EQUIPMENT_RARITY: Record<EquipmentRarity, {
+  name: string;
+  color: string;
+  statMultiplier: { min: number; max: number };
+  dropRate: number; // Percentage chance (adds up to 100)
+}> = {
+  common: {
+    name: "Common",
+    color: "#9CA3AF", // Gray
+    statMultiplier: { min: 1.0, max: 1.2 },
+    dropRate: 50,
+  },
+  uncommon: {
+    name: "Uncommon",
+    color: "#22C55E", // Green
+    statMultiplier: { min: 1.2, max: 1.5 },
+    dropRate: 30,
+  },
+  rare: {
+    name: "Rare",
+    color: "#3B82F6", // Blue
+    statMultiplier: { min: 1.5, max: 2.0 },
+    dropRate: 13,
+  },
+  epic: {
+    name: "Epic",
+    color: "#A855F7", // Purple
+    statMultiplier: { min: 2.0, max: 2.8 },
+    dropRate: 5,
+  },
+  legendary: {
+    name: "Legendary",
+    color: "#F59E0B", // Gold/Orange
+    statMultiplier: { min: 2.8, max: 4.0 },
+    dropRate: 2,
+  },
+};
+
+// Equipment slot configuration
+export const EQUIPMENT_SLOTS: Record<EquipmentSlot, {
+  name: string;
+  stat: "health" | "attack" | "defense";
+  baseStatRange: { min: number; max: number };
+  icon: string;
+  description: string;
+}> = {
+  collar: {
+    name: "Collar",
+    stat: "health",
+    baseStatRange: { min: 50, max: 150 },
+    icon: "circle.fill",
+    description: "Increases maximum health",
+  },
+  armor: {
+    name: "Armor",
+    stat: "defense",
+    baseStatRange: { min: 5, max: 20 },
+    icon: "shield.fill",
+    description: "Increases defense",
+  },
+  wristlets: {
+    name: "Wristlets",
+    stat: "attack",
+    baseStatRange: { min: 5, max: 20 },
+    icon: "bolt.fill",
+    description: "Increases attack power",
+  },
+};
+
+// Equipment interface
+export interface Equipment {
+  id: string;
+  slot: EquipmentSlot;
+  rarity: EquipmentRarity;
+  name: string;
+  statBonus: number;
+  element?: ElementType; // Optional elemental affinity for bonus
+  elementBonus?: number; // Extra bonus if pet matches element
+  imageUrl?: string; // Generated image of the equipment
+  createdAt: number;
+}
+
+// Generate procedural equipment name
+export function generateEquipmentName(slot: EquipmentSlot, rarity: EquipmentRarity, element?: ElementType): string {
+  const prefixes: Record<EquipmentRarity, string[]> = {
+    common: ["Simple", "Basic", "Plain", "Worn"],
+    uncommon: ["Sturdy", "Refined", "Quality", "Polished"],
+    rare: ["Enchanted", "Mystic", "Arcane", "Blessed"],
+    epic: ["Ancient", "Heroic", "Legendary", "Divine"],
+    legendary: ["Mythical", "Godforged", "Celestial", "Primordial"],
+  };
+  
+  const elementNames: Record<ElementType, string> = {
+    fire: "Flame",
+    water: "Tide",
+    earth: "Stone",
+    air: "Wind",
+  };
+  
+  const slotNames: Record<EquipmentSlot, string[]> = {
+    collar: ["Collar", "Necklace", "Choker", "Band"],
+    armor: ["Armor", "Plate", "Guard", "Shell"],
+    wristlets: ["Wristlets", "Bracers", "Cuffs", "Bands"],
+  };
+  
+  const prefix = prefixes[rarity][Math.floor(Math.random() * prefixes[rarity].length)];
+  const slotName = slotNames[slot][Math.floor(Math.random() * slotNames[slot].length)];
+  
+  if (element) {
+    return `${prefix} ${elementNames[element]} ${slotName}`;
+  }
+  return `${prefix} ${slotName}`;
+}
+
+// Generate procedural equipment stats
+export function generateEquipmentStats(slot: EquipmentSlot, rarity: EquipmentRarity): number {
+  const slotConfig = EQUIPMENT_SLOTS[slot];
+  const rarityConfig = EQUIPMENT_RARITY[rarity];
+  
+  // Base stat from slot range
+  const baseMin = slotConfig.baseStatRange.min;
+  const baseMax = slotConfig.baseStatRange.max;
+  const baseStat = baseMin + Math.random() * (baseMax - baseMin);
+  
+  // Apply rarity multiplier
+  const multiplierMin = rarityConfig.statMultiplier.min;
+  const multiplierMax = rarityConfig.statMultiplier.max;
+  const multiplier = multiplierMin + Math.random() * (multiplierMax - multiplierMin);
+  
+  return Math.floor(baseStat * multiplier);
+}
+
+// Roll for equipment rarity based on drop rates
+export function rollEquipmentRarity(luckBonus: number = 0): EquipmentRarity {
+  // Luck bonus shifts the roll towards higher rarities (0-50 range)
+  const roll = Math.random() * 100 - Math.min(luckBonus, 50);
+  
+  let cumulative = 0;
+  const rarities: EquipmentRarity[] = ["legendary", "epic", "rare", "uncommon", "common"];
+  
+  for (const rarity of rarities) {
+    cumulative += EQUIPMENT_RARITY[rarity].dropRate;
+    if (roll < cumulative) {
+      return rarity;
+    }
+  }
+  
+  return "common";
+}
+
+// Generate a complete equipment item
+export function generateEquipment(
+  slot: EquipmentSlot,
+  luckBonus: number = 0,
+  forcedRarity?: EquipmentRarity,
+  element?: ElementType
+): Equipment {
+  const rarity = forcedRarity || rollEquipmentRarity(luckBonus);
+  const statBonus = generateEquipmentStats(slot, rarity);
+  const name = generateEquipmentName(slot, rarity, element);
+  
+  // 30% chance for elemental affinity
+  const hasElement = element || (Math.random() < 0.3);
+  const equipElement = element || (hasElement ? (["fire", "water", "earth", "air"] as ElementType[])[Math.floor(Math.random() * 4)] : undefined);
+  
+  return {
+    id: `eq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    slot,
+    rarity,
+    name,
+    statBonus,
+    element: equipElement,
+    elementBonus: equipElement ? Math.floor(statBonus * 0.2) : undefined, // 20% bonus if element matches
+    createdAt: Date.now(),
+  };
+}
+
+// Competition reward tiers based on guild ranking
+export const COMPETITION_REWARDS: Record<number, {
+  equipmentSlots: EquipmentSlot[];
+  guaranteedRarity?: EquipmentRarity;
+  luckBonus: number;
+  consumables: { type: ConsumableType; amount: number }[];
+  aiTokens: number;
+}> = {
+  1: { // 1st place
+    equipmentSlots: ["collar", "armor", "wristlets"],
+    guaranteedRarity: "epic",
+    luckBonus: 40,
+    consumables: [
+      { type: "treat", amount: 10 },
+      { type: "energy_boost", amount: 5 },
+    ],
+    aiTokens: 20,
+  },
+  2: { // 2nd place
+    equipmentSlots: ["collar", "armor"],
+    guaranteedRarity: "rare",
+    luckBonus: 30,
+    consumables: [
+      { type: "treat", amount: 5 },
+      { type: "energy_boost", amount: 3 },
+    ],
+    aiTokens: 10,
+  },
+  3: { // 3rd place
+    equipmentSlots: ["armor"],
+    guaranteedRarity: "rare",
+    luckBonus: 20,
+    consumables: [
+      { type: "treat", amount: 3 },
+      { type: "energy_boost", amount: 2 },
+    ],
+    aiTokens: 5,
+  },
+  4: { // 4th place
+    equipmentSlots: ["wristlets"],
+    luckBonus: 10,
+    consumables: [
+      { type: "treat", amount: 2 },
+      { type: "energy_boost", amount: 1 },
+    ],
+    aiTokens: 2,
+  },
+  5: { // 5th place
+    equipmentSlots: ["collar"],
+    luckBonus: 5,
+    consumables: [
+      { type: "treat", amount: 1 },
+    ],
+    aiTokens: 1,
+  },
+};

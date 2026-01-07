@@ -149,6 +149,108 @@ export const appRouter = router({
     .mutation(async ({ input }) => {
       return processPetImage(input.imageUrl);
     }),
+
+  // Generate pet image with equipped items
+  generateEquippedPetImage: publicProcedure
+    .input(z.object({
+      petImageUrl: z.string(),
+      element: elementSchema,
+      equippedItems: z.object({
+        collar: z.object({
+          name: z.string(),
+          rarity: z.enum(["common", "uncommon", "rare", "epic", "legendary"]),
+          element: elementSchema.optional(),
+        }).optional(),
+        armor: z.object({
+          name: z.string(),
+          rarity: z.enum(["common", "uncommon", "rare", "epic", "legendary"]),
+          element: elementSchema.optional(),
+        }).optional(),
+        wristlets: z.object({
+          name: z.string(),
+          rarity: z.enum(["common", "uncommon", "rare", "epic", "legendary"]),
+          element: elementSchema.optional(),
+        }).optional(),
+      }),
+    }))
+    .mutation(async ({ input }) => {
+      // Build equipment description for the prompt
+      const equipmentDescriptions: string[] = [];
+      
+      const rarityAdjectives: Record<string, string> = {
+        common: "simple",
+        uncommon: "well-crafted",
+        rare: "ornate",
+        epic: "magnificent glowing",
+        legendary: "legendary radiant",
+      };
+      
+      const elementColors: Record<string, string> = {
+        fire: "fiery red and orange",
+        water: "ocean blue and teal",
+        earth: "earthy brown and green",
+        air: "ethereal white and purple",
+      };
+      
+      if (input.equippedItems.collar) {
+        const adj = rarityAdjectives[input.equippedItems.collar.rarity];
+        const color = input.equippedItems.collar.element 
+          ? elementColors[input.equippedItems.collar.element] 
+          : "golden";
+        equipmentDescriptions.push(`wearing a ${adj} ${color} collar around its neck`);
+      }
+      
+      if (input.equippedItems.armor) {
+        const adj = rarityAdjectives[input.equippedItems.armor.rarity];
+        const color = input.equippedItems.armor.element 
+          ? elementColors[input.equippedItems.armor.element] 
+          : "silver";
+        equipmentDescriptions.push(`wearing ${adj} ${color} body armor`);
+      }
+      
+      if (input.equippedItems.wristlets) {
+        const adj = rarityAdjectives[input.equippedItems.wristlets.rarity];
+        const color = input.equippedItems.wristlets.element 
+          ? elementColors[input.equippedItems.wristlets.element] 
+          : "bronze";
+        equipmentDescriptions.push(`with ${adj} ${color} wristlets on its front legs`);
+      }
+      
+      if (equipmentDescriptions.length === 0) {
+        return { 
+          success: false, 
+          error: "No equipment to visualize",
+          imageUrl: input.petImageUrl 
+        };
+      }
+      
+      const equipmentPrompt = equipmentDescriptions.join(", ");
+      const fullPrompt = `A fantasy creature ${equipmentPrompt}, maintaining the exact same creature design and pose, on a solid bright green (#00FF00) background, digital art, high quality, detailed equipment`;
+      
+      try {
+        const result = await generateImage({
+          prompt: fullPrompt,
+          originalImages: [{ url: input.petImageUrl }],
+        });
+        
+        // Process to remove background
+        const processed = result.url ? await processPetImage(result.url) : { processedUrl: null, originalUrl: null };
+        
+        return {
+          success: true,
+          imageUrl: processed.processedUrl || result.url,
+          originalImageUrl: result.url,
+          equipmentDescription: equipmentPrompt,
+        };
+      } catch (error) {
+        console.error("Equipment visualization failed:", error);
+        return {
+          success: false,
+          error: "Failed to generate equipped pet image",
+          imageUrl: input.petImageUrl,
+        };
+      }
+    }),
 });
 
 export type AppRouter = typeof appRouter;

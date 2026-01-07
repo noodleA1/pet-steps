@@ -83,6 +83,7 @@ const MAPPING = {
   "checkmark.circle.fill": "check-circle",
   "flag.fill": "flag",
   "chart.bar.fill": "bar-chart",
+  "tray.fill": "inbox",
 } satisfies Record<string, MaterialIconName>;
 
 /**
